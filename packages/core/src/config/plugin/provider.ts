@@ -128,8 +128,11 @@ export const Plugin = define({
           // A config-level package override repackages the model for a different SDK/package,
           // so variants spelled for the previous package must be regenerated even when no
           // catalog base is present (e.g. a custom model supplied by a plugin transform).
+          // Compare the normalized package after overlay() against the pre-overlay package:
+          // the raw config.package may use the aisdk: prefix form for the same package.
+          // Catalog models are excluded here; `repackaged` above already handles them.
           const packageChangedViaConfig =
-            config.package !== undefined && config.package !== existingPackage
+            !source?.base && models.get(providerID, id)?.package !== existingPackage
           if (
             config.variants === undefined &&
             config.capabilities?.reasoning === undefined &&
