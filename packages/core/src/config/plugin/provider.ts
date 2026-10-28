@@ -103,7 +103,12 @@ export const Plugin = define({
         const providerID = definition.providerID
         for (const [id, config] of Object.entries(item.models ?? {})) {
           const source = definition.models.get(id)
-          const inherit = source?.inherit || !models.get(providerID, id)
+          // Preserve variants already supplied by an earlier transform (e.g. a spec-pack plugin)
+          // unless the model was repackaged for a different package, in which case the inherited
+          // variants are spelled for the old package and must be regenerated.
+          const existing = models.get(providerID, id)
+          const hasExistingVariants = (existing?.variants?.length ?? 0) > 0
+          const inherit = source?.inherit || !existing
           overlay(
             models,
             models.provider.get(providerID)?.provider.package,
@@ -122,7 +127,8 @@ export const Plugin = define({
           if (
             config.variants === undefined &&
             config.capabilities?.reasoning === undefined &&
-            (!source?.base || repackaged)
+            (!source?.base || repackaged) &&
+            !(hasExistingVariants && !repackaged)
           )
             models.update(providerID, id, (model) => {
               model.variants = [
