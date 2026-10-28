@@ -107,6 +107,7 @@ export const Plugin = define({
           // unless the model was repackaged for a different package, in which case the inherited
           // variants are spelled for the old package and must be regenerated.
           const existing = models.get(providerID, id)
+          const existingPackage = existing?.package
           const hasExistingVariants = (existing?.variants?.length ?? 0) > 0
           const inherit = source?.inherit || !existing
           overlay(
@@ -124,11 +125,16 @@ export const Plugin = define({
             source?.base !== undefined &&
             source.base.variants.length > 0 &&
             models.get(providerID, id)?.package !== source.base.package
+          // A config-level package override repackages the model for a different SDK/package,
+          // so variants spelled for the previous package must be regenerated even when no
+          // catalog base is present (e.g. a custom model supplied by a plugin transform).
+          const packageChangedViaConfig =
+            config.package !== undefined && config.package !== existingPackage
           if (
             config.variants === undefined &&
             config.capabilities?.reasoning === undefined &&
-            (!source?.base || repackaged) &&
-            !(hasExistingVariants && !repackaged)
+            (!source?.base || repackaged || packageChangedViaConfig) &&
+            !(hasExistingVariants && !repackaged && !packageChangedViaConfig)
           )
             models.update(providerID, id, (model) => {
               model.variants = [
